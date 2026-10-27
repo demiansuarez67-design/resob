@@ -5,7 +5,7 @@
    archivo único portátil: si los recursos vienen incrustados en la
    página se usan esos; si no, se descargan de la carpeta vendor/.
    ===================================================================== */
-const VERSION_RESO = "1.0.0";
+const VERSION_RESO = "1.0.1";
 const RECURSOS = {
   pdfWorker: "vendor/pdfjs/pdf.worker.min.js",
   tessWorker: "vendor/tesseract/worker.min.js",

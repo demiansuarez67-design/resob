@@ -18,6 +18,7 @@ for js in ("vendor/pdfjs/pdf.min.js", "vendor/tesseract/tesseract.min.js", "js/r
 
 html = html.replace('<link rel="stylesheet" href="css/reso.css">', "<style>" + leer("css/reso.css") + "</style>")
 html = re.sub(r'\s*<link rel="(manifest|apple-touch-icon)"[^>]*>', "", html)
+html = html.replace('src="icons/logo-encabezado.png"', 'src="data:image/png;base64,' + b64("icons/logo-encabezado.png") + '"')
 html = html.replace('href="icons/favicon.png"', 'href="data:image/png;base64,' + b64("icons/favicon.png") + '"')
 
 def script(ruta):
@@ -33,7 +34,7 @@ html = html.replace('<script src="vendor/tesseract/tesseract.min.js"></script>',
     + incrustado("tess-core", "vendor/tesseract/tesseract-core-simd-lstm.wasm.js") + "\n"
     + incrustado("tess-spa", "vendor/tesseract/spa.traineddata.gz"))
 html = html.replace('<script src="js/reso.js"></script>', script("js/reso.js"))
-assert 'src="' not in html, "quedó algún recurso sin incrustar"
+assert not re.search(r'src="(?!data:)', html), "quedó algún recurso sin incrustar"
 
 os.makedirs(os.path.join(RAIZ, "portable"), exist_ok=True)
 destino = os.path.join(RAIZ, "portable", "RESO - Buscador de Resoluciones.html")
