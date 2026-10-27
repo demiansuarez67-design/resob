@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RESO - Buscador de Resoluciones</title>
+<meta name="description" content="Buscador de resoluciones del Consejo Directivo de la Facultad de Humanidades y Ciencias Sociales (UNPSJB).">
+<meta name="theme-color" content="#1f4f86">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/reso.css">
+</head>
+<body>
+<div class="aviso-version" id="aviso-version" hidden>Hay una versión nueva de RESO. <button class="accion" id="aviso-version-boton">Actualizar ahora</button></div>
+<header><div class="envoltura">
+  <div class="marca">
+    <div><h1>RESO <span>Buscador de Resoluciones</span></h1>
+    <p>Consejo Directivo · Facultad de Humanidades y Ciencias Sociales · UNPSJB</p></div>
+    <button class="instalar" id="instalar" hidden>Instalar en el escritorio</button>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-panel="lista" aria-selected="true">Listado</button>
+    <button role="tab" data-panel="busqueda" aria-selected="false">Búsqueda</button>
+    <button role="tab" data-panel="pdf" aria-selected="false">Cargar PDF</button>
+    <button role="tab" data-panel="informe" aria-selected="false">Informe<span class="contador" id="cont-informe">0</span></button>
+  </nav>
+</div></header>
+<main>
+  <div class="barra" id="barra">
+    <div class="grupo">
+      <label for="tipo">Mostrar</label>
+      <select id="tipo"></select>
+    </div>
+    <div class="grupo">
+      <span id="estado">Cargando…</span>
+      <button class="accion" id="actualizar">Revisar ahora</button>
+      <button class="accion" id="abrir-carpetas">Fuentes</button>
+    </div>
+  </div>
+
+  <section id="panel-lista">
+    <table>
+      <thead><tr><th style="width:120px">Número</th><th style="width:110px">Fecha</th><th>Título</th></tr></thead>
+      <tbody id="filas"></tbody>
+    </table>
+    <button class="accion mas" id="mas" hidden>Mostrar más</button>
+  </section>
+
+  <section id="panel-busqueda" hidden>
+    <form id="form-buscar">
+      <div class="buscador">
+        <input type="search" id="q" placeholder='Palabras o números: Di Santo, jubilación, Ordenanza 145, 25.697.580' autocomplete="off" aria-label="Texto a buscar">
+        <button type="submit" class="primario">Buscar</button>
+      </div>
+      <div class="filtros-num">
+        <label>N.º de resolución <input type="text" id="q-num" inputmode="numeric" placeholder="Ej.: 91, 91/2026 o 100-120" autocomplete="off"></label>
+        <label>Año <input type="text" id="q-anio" inputmode="numeric" placeholder="Ej.: 2015 o 2010-2015" autocomplete="off"></label>
+        <button type="button" class="accion" id="limpiar-filtros">Limpiar</button>
+      </div>
+    </form>
+    <p class="ayuda">Busca en los artículos que siguen al «RESUELVE» y en los anexos (en las del sitio web, en la descripción publicada). Aparecen las resoluciones que contienen todas las palabras; no importan tildes ni mayúsculas. Los números se buscan completos y sin importar los puntos (25697580 encuentra «25.697.580»). Los campos N.º y Año se pueden usar solos o junto con palabras. Con varias palabras, primero aparecen las que las tienen juntas; entre comillas se busca solo la frase exacta.
+      <label style="margin-left:8px;white-space:nowrap"><input type="checkbox" id="en-titulo"> buscar también en el título</label></p>
+    <div id="resultados"></div>
+  </section>
+
+  <section id="panel-pdf" hidden>
+    <p class="ayuda">Para resoluciones que no están en Huarpe. Se lee el texto del PDF y se agrega al listado y a la búsqueda; el archivo en sí no se guarda. Revisá los datos detectados antes de guardar.</p>
+    <label class="zona" id="zona" for="archivos">
+      <strong>Arrastrá uno o varios PDF acá</strong><br>o hacé clic para elegirlos
+      <input type="file" id="archivos" accept="application/pdf,.pdf" multiple hidden>
+    </label>
+    <div id="cargas"></div>
+    <details class="tarjeta desplegable" id="lista-cargadas">
+      <summary>PDF cargados en esta computadora <span class="contador-gris" id="cont-cargadas">0</span></summary>
+      <input type="search" id="filtro-cargadas" placeholder="Filtrar por número o título" autocomplete="off" hidden>
+      <div id="tabla-cargadas"></div>
+    </details>
+    <div class="tarjeta">
+      <h3>Pasar las cargas a otra computadora</h3>
+      <p class="ayuda" style="margin-bottom:10px">Cada computadora guarda sus propios datos. Para compartir las resoluciones cargadas desde PDF, exportalas a un archivo y abrí ese archivo con «Importar cargas» en la otra computadora. También sirve como copia de seguridad.</p>
+      <div class="botones">
+        <button class="accion" id="exportar">Exportar cargas</button>
+        <label class="accion" for="importar" style="display:inline-block;cursor:pointer">Importar cargas</label>
+        <input type="file" id="importar" accept=".json,application/json" hidden>
+        <span id="info-cargas" class="ayuda" style="margin:0"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-informe" hidden>
+    <div class="informe-cab">
+      <div class="campo"><label for="inf-titulo">Título del informe</label>
+        <input type="text" id="inf-titulo" value="Informe de resoluciones"></div>
+      <label class="opcion"><input type="checkbox" id="inf-completo" checked> incluir los artículos completos</label>
+      <label class="opcion"><input type="checkbox" id="inf-anexos"> incluir los anexos completos</label>
+      <button class="primario" id="inf-descargar">Descargar Word</button>
+      <button class="accion peligro" id="inf-vaciar">Vaciar informe</button>
+    </div>
+    <p class="ayuda" id="inf-ayuda"></p>
+    <div id="inf-lista"></div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <div class="cab"><div><h2 id="dlg-titulo"></h2><div id="dlg-meta" style="font-size:13px;color:var(--suave)"></div></div>
+    <div class="botones">
+      <button class="accion" id="dlg-informe">Agregar al informe</button>
+      <button class="accion peligro" id="dlg-eliminar" hidden>Eliminar</button>
+      <button class="accion" id="dlg-cerrar">Cerrar</button></div></div>
+  <div class="cuerpo"><div class="texto" id="dlg-texto"></div></div>
+</dialog>
+
+<dialog id="dlg-carpetas">
+  <div class="cab"><div><h2>Fuentes de resoluciones</h2></div>
+    <div class="botones"><button class="accion" id="carpetas-cerrar">Cerrar</button></div></div>
+  <div class="cuerpo">
+    <h3 style="margin:0 0 8px;font-size:15px">Sitio web de la facultad (Consejo Directivo, 2002–2024)</h3>
+    <p class="botones" style="margin:0 0 22px"><span id="info-sitio" class="ayuda" style="margin:0"></span>
+      <button class="accion" id="sitio-actualizar">Revisar el sitio ahora</button></p>
+    <h3 style="margin:0 0 8px;font-size:15px">Anexos de las resoluciones de Huarpe</h3>
+    <p class="botones" style="margin:0 0 22px"><span id="info-anexos" class="ayuda" style="margin:0"></span>
+      <button class="accion" id="anexos-actualizar">Leer anexos ahora</button></p>
+    <h3 style="margin:0 0 8px;font-size:15px">Carpetas de Huarpe</h3>
+    <div id="lista-carpetas"></div>
+    <p class="ayuda" style="margin-top:18px">Para sumar otra carpeta: abrila en Huarpe con F12 → Red, recargá y buscá la fila «documentos?dir=DESC&amp;idContenedor=…». Escribí acá el número que sigue a «idContenedor=».</p>
+    <form class="botones" id="form-carpeta">
+      <input type="text" id="nueva-carpeta" inputmode="numeric" placeholder="Ej.: 31" style="width:120px">
+      <button class="primario" type="submit">Agregar carpeta</button>
+      <span id="carpeta-msg" class="ayuda" style="margin:0"></span>
+    </form>
+  </div>
+</dialog>
+
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/tesseract/tesseract.min.js"></script>
+<script src="js/reso.js"></script>
+</body>
+</html>

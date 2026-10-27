@@ -1,0 +1,16 @@
+{
+  "name": "RESO - Buscador de Resoluciones",
+  "short_name": "RESO",
+  "description": "Buscador de resoluciones del Consejo Directivo de la Facultad de Humanidades y Ciencias Sociales (UNPSJB).",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8fa",
+  "theme_color": "#1f4f86",
+  "icons": [
+    { "src": "icons/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icono-512-enmascarable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
