@@ -5,7 +5,7 @@
    archivo único portátil: si los recursos vienen incrustados en la
    página se usan esos; si no, se descargan de la carpeta vendor/.
    ===================================================================== */
-const VERSION_RESO = "1.0.2";
+const VERSION_RESO = "1.0.3";
 const RECURSOS = {
   pdfWorker: "vendor/pdfjs/pdf.worker.min.js",
   tessWorker: "vendor/tesseract/worker.min.js",
@@ -15,7 +15,11 @@ const RECURSOS = {
 const MODO_PORTATIL = () => !!document.getElementById("pdfjs-worker");
 
 const API_URL = "https://huarpe.unp.edu.ar/sudocu/api/mpd/guest/documentos";
-const CARPETAS_INICIALES = [{id: 28, nombre: "FHyCS - Resoluciones Consejo Directivo"}];
+const CARPETAS_INICIALES = [
+  {id: 28, nombre: "FHyCS - Resoluciones Consejo Directivo"},
+  {id: 29, nombre: "FHyCS - Resoluciones digitales"},
+  {id: 30, nombre: "FHyCS - Resoluciones digitales Ad. Referendum"},
+];
 const TIPO_PRINCIPAL = "Resolución Digital CDFHyCS";
 const INTERVALO_MINUTOS = 30;
 const PAUSA_ENTRE_PAGINAS = 800;   // milisegundos
@@ -175,8 +179,9 @@ async function sincronizarCarpeta(c){
   return nuevas;
 }
 
+let resincronizar = false;
 async function sincronizar(){
-  if (sincronizando) return;
+  if (sincronizando){ resincronizar = true; return; }
   sincronizando = true; pintarEstado();
   const errores = []; let nuevas = 0;
   for (const c of CARPETAS){
@@ -192,6 +197,7 @@ async function sincronizar(){
   sincronizando = false;
   refrescarTipos(); pintarEstado(); await cargarLista();
   if (nuevas && document.visibilityState === "visible" && !$("#panel-busqueda").hidden && hayBusqueda()) buscar();
+  if (resincronizar){ resincronizar = false; setTimeout(sincronizar, 1000); }
 }
 
 /* ---------------------------------------------------------------- sitio web de la facultad (2002-2024) */
@@ -1304,12 +1310,16 @@ function conectarEventos(){
     if (CARPETAS.some(c => c.id === id)){ msg.textContent = "Esa carpeta ya se revisa."; return; }
     msg.textContent = "Verificando…";
     try {
-      const d = await pedirPagina(id, 0, 1);
-      if (!d.documents || !d.documents.length) throw new Error("vacía");
+      const d = await pedirPagina(id, 0, 15);
+      if (!d.documents || !d.documents.length){ msg.textContent = "Huarpe respondió, pero esa carpeta no tiene documentos públicos."; return; }
       CARPETAS.push({id, nombre: d.folder_name || "Carpeta " + id}); await DB.setMeta("carpetas", CARPETAS);
       msg.textContent = `Agregada: ${d.folder_name || id}. Descargando su historial…`; $("#nueva-carpeta").value = "";
       pintarCarpetas(); sincronizar();
-    } catch(e){ msg.textContent = "No se encontró una carpeta pública con ese número."; }
+    } catch(e){
+      console.error(e);
+      msg.textContent = e.http ? `Huarpe respondió con error ${e.http} para esa carpeta. Probá de nuevo en unos minutos.`
+        : "No se pudo conectar con Huarpe en este momento (puede estar ocupado con otra descarga). Probá de nuevo en unos minutos.";
+    }
   };
 }
 

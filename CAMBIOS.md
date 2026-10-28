@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.0.3
+- Las carpetas 29 (Resoluciones digitales) y 30 (Resoluciones digitales Ad. Referendum) de Huarpe vienen incluidas de fábrica, junto con la 28.
+- Al agregar una carpeta, si Huarpe no responde se muestra el motivo real en lugar de «no se encontró».
+- Una carpeta agregada mientras había otra descarga en curso se descarga apenas termina la anterior.
+
 ## 1.0.2
 - Corregido: la primera vez que se abría RESO instalado, la página se recargaba sola y la descarga de Huarpe quedaba cortada (unas 50 resoluciones). Ahora la descarga completa se retoma automáticamente hasta terminar.
 - Las carpetas de Huarpe agregadas a mano viajan en «Exportar / Importar cargas».
