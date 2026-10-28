@@ -294,7 +294,7 @@ header h1 span{align-self:center}
    archivo único portátil: si los recursos vienen incrustados en la
    página se usan esos; si no, se descargan de la carpeta vendor/.
    ===================================================================== */
-const VERSION_RESO = "1.0.1";
+const VERSION_RESO = "1.0.2";
 const RECURSOS = {
   pdfWorker: "vendor/pdfjs/pdf.worker.min.js",
   tessWorker: "vendor/tesseract/worker.min.js",
@@ -431,7 +431,10 @@ function convertir(doc, idCarpeta, cargaInicial){
 const esperar = ms => new Promise(r => setTimeout(r, ms));
 
 async function sincronizarCarpeta(c){
-  const cargaInicial = ![...RES.values()].some(x => x.origen === "huarpe" && x.carpeta === c.id);
+  // La descarga completa se marca como terminada recién al llegar al final:
+  // si se corta (se cierra la ventana, se recarga), la próxima vez sigue recorriendo todo.
+  const completa = await DB.meta("carga_completa_" + c.id);
+  const cargaInicial = !completa;
   const relevamiento = !cargaInicial && [...RES.values()].some(x => x.origen === "huarpe" && x.carpeta === c.id && x.documento === undefined);
   let offset = 0, nuevas = 0;
   while (true){
@@ -451,7 +454,10 @@ async function sincronizarCarpeta(c){
     }
     nuevas += nuevos.length; offset += docs.length;
     if (cargaInicial) pintarEstado();
-    if (!docs.length || docs.length < tamanoPagina || (total && offset >= total)) break;
+    if (!docs.length || docs.length < tamanoPagina || (total && offset >= total)){
+      if (!completa) await DB.setMeta("carga_completa_" + c.id, ahoraTxt());
+      break;
+    }
     if (!cargaInicial && !relevamiento && !nuevos.length) break;
     await esperar(PAUSA_ENTRE_PAGINAS);
   }
@@ -1554,8 +1560,9 @@ function conectarEventos(){
     const cargas = [...RES.values()].filter(x => x.origen === "pdf");
     const anexos = [...RES.values()].filter(x => x.origen !== "pdf" && x.anexo_pdf).map(x => ({id: x.id, anexo: x.anexo}));
     const textos = [...RES.values()].filter(x => x.origen === "web" && x.ocr).map(x => ({id: x.id, texto: x.texto, resuelve: x.resuelve, anexo: x.anexo}));
-    if (!cargas.length && !anexos.length && !textos.length){ aviso("No hay resoluciones cargadas desde PDF para exportar."); return; }
-    descargar(new Blob([JSON.stringify({formato: "buscador-resoluciones-fhycs", version: 1, exportado: ahoraTxt(), resoluciones: cargas, anexos, textos})], {type: "application/json"}),
+    const carpetasExtra = CARPETAS.filter(c => !CARPETAS_INICIALES.some(i => i.id === c.id));
+    if (!cargas.length && !anexos.length && !textos.length && !carpetasExtra.length){ aviso("No hay resoluciones cargadas desde PDF para exportar."); return; }
+    descargar(new Blob([JSON.stringify({formato: "buscador-resoluciones-fhycs", version: 1, exportado: ahoraTxt(), resoluciones: cargas, anexos, textos, carpetas: carpetasExtra})], {type: "application/json"}),
       `Cargas PDF resoluciones ${fecha(hoyISO()).replace(/\//g, "-")}.json`);
   };
   $("#importar").onchange = async ev => {
@@ -1565,10 +1572,12 @@ function conectarEventos(){
       if (d.formato !== "buscador-resoluciones-fhycs") throw new Error();
       const nuevas = (d.resoluciones || []).filter(x => x && x.id && x.origen === "pdf" && !RES.has(x.id));
       await DB.guardar(nuevas); nuevas.forEach(x => RES.set(x.id, x));
-      let nAnexos = 0;
+      let nAnexos = 0, nCarpetas = 0;
+      for (const c of (d.carpetas || [])) if (c && +c.id && !CARPETAS.some(x => x.id === +c.id)){ CARPETAS.push({id: +c.id, nombre: c.nombre || "Carpeta " + c.id}); nCarpetas++; }
+      if (nCarpetas){ await DB.setMeta("carpetas", CARPETAS); setTimeout(sincronizar, 500); }
       for (const a of (d.anexos || [])) if (a && RES.has(a.id) && !RES.get(a.id).anexo_pdf){ await agregarAnexo(a.id, a.anexo); nAnexos++; }
       for (const t of (d.textos || [])) if (t && RES.has(t.id) && !RES.get(t.id).ocr){ await completarConTexto(t.id, t); nAnexos++; }
-      aviso(nuevas.length || nAnexos ? `Se importaron ${nuevas.length} resoluciones${nAnexos ? ` y ${nAnexos} anexos` : ""}.` : "No había nada nuevo en ese archivo.");
+      aviso(nuevas.length || nAnexos || nCarpetas ? `Se importaron ${nuevas.length} resoluciones${nAnexos ? `, ${nAnexos} anexos` : ""}${nCarpetas ? ` y ${nCarpetas} carpetas de Huarpe` : ""}.` : "No había nada nuevo en ese archivo.");
       refrescarTipos(); pintarEstado(); cargarLista(); pintarInfoCargas();
     } catch(e){ aviso("Ese archivo no es una exportación de este buscador."); }
   };
@@ -1605,8 +1614,11 @@ function prepararAppInstalable(){
     reg.addEventListener("updatefound", () => avisar(reg.installing));
     setInterval(() => reg.update().catch(() => {}), 6 * 3600 * 1000);
   }).catch(e => console.warn("Service worker:", e));
+  // Solo se recarga cuando el usuario aceptó una actualización, no en la primera instalación
+  // (antes eso recargaba la página en medio de la primera descarga).
+  const habiaControlador = !!navigator.serviceWorker.controller;
   let recargando = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!recargando){ recargando = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (habiaControlador && !recargando){ recargando = true; location.reload(); } });
   $("#aviso-version-boton").onclick = async () => {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg && reg.waiting) reg.waiting.postMessage("activar"); else location.reload();
@@ -1630,7 +1642,8 @@ async function iniciar(){
     RES.set(x.id, x);
   }
   if (cambiadas.length) await DB.guardar(cambiadas);
-  CARPETAS = (await DB.meta("carpetas")) || CARPETAS_INICIALES.map(c => ({...c}));
+  CARPETAS = (await DB.meta("carpetas")) || [];
+  for (const c of CARPETAS_INICIALES) if (!CARPETAS.some(x => x.id === c.id)) CARPETAS.push({...c});
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   refrescarTipos(); pintarContador(); await pintarEstado(); await cargarLista();
   await sincronizar();

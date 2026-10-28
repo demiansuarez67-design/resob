@@ -1,6 +1,6 @@
 /* RESO - service worker: permite instalar la aplicación y abrirla sin conexión.
    Al publicar cambios, aumentar VERSION para que todos reciban el aviso de actualización. */
-const VERSION = "reso-1.0.1";
+const VERSION = "reso-1.0.2";
 const NUCLEO = [
   "./", "index.html", "css/reso.css", "js/reso.js", "manifest.webmanifest",
   "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js", "vendor/tesseract/tesseract.min.js",
